@@ -43,7 +43,7 @@ export default async function handler(req, res) {
     if (!response.ok) {
       const err = await response.text();
       console.error('Cal.com slots error:', err);
-      return res.status(502).json({ error: 'Failed to fetch available slots' });
+      return res.status(502).json({ error: 'Failed to fetch available slots', detail: err, status: response.status });
     }
 
     const data = await response.json();
