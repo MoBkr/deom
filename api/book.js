@@ -22,39 +22,40 @@ export default async function handler(req, res) {
   }
 
   try {
-    const response = await fetch('https://api.cal.com/v2/bookings', {
-      method: 'POST',
-      headers: {
-        'cal-api-version': '2024-08-13',
-        Authorization: `Bearer ${CAL_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        eventTypeId: Number(CAL_EVENT_TYPE_ID),
-        start: slotTime,
-        attendee: {
-          name,
-          email,
+    const response = await fetch(
+      `https://api.cal.com/v1/bookings?apiKey=${CAL_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventTypeId: Number(CAL_EVENT_TYPE_ID),
+          start: slotTime,
+          responses: {
+            name,
+            email,
+            location: { value: 'integrations:daily', optionValue: '' },
+          },
           timeZone,
-        },
-      }),
-    });
+          language: 'en',
+          metadata: {},
+        }),
+      }
+    );
 
     if (!response.ok) {
       const err = await response.text();
       console.error('Cal.com booking error:', err);
-      return res.status(502).json({ error: 'Failed to create booking' });
+      return res.status(502).json({ error: 'Failed to create booking', detail: err });
     }
 
-    const data = await response.json();
-    const booking = data.data;
+    const booking = await response.json();
 
     res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(200).json({
       success: true,
       bookingId: booking.uid,
       meetingLink: booking.meetingUrl ?? null,
-      start: booking.start,
+      start: booking.startTime,
       title: booking.title,
     });
   } catch (err) {
