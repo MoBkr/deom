@@ -16,28 +16,22 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Server configuration error' });
   }
 
-  // Fetch slots for the next 7 days
   const start = new Date();
   start.setHours(0, 0, 0, 0);
   const end = new Date(start);
   end.setDate(end.getDate() + 7);
 
   const params = new URLSearchParams({
+    apiKey: CAL_API_KEY,
     eventTypeId: CAL_EVENT_TYPE_ID,
-    start: start.toISOString(),
-    end: end.toISOString(),
+    startTime: start.toISOString(),
+    endTime: end.toISOString(),
     timeZone,
   });
 
   try {
     const response = await fetch(
-      `https://api.cal.com/v2/slots/available?${params}`,
-      {
-        headers: {
-          'cal-api-version': '2024-09-04',
-          Authorization: `Bearer ${CAL_API_KEY}`,
-        },
-      }
+      `https://api.cal.com/v1/slots/available?${params}`
     );
 
     if (!response.ok) {
@@ -48,9 +42,9 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    // Flatten and format slots: cal.com v2 returns { slots: { "YYYY-MM-DD": [{ time, ... }] } }
+    // v1 response: { slots: { "YYYY-MM-DD": [{ time: "..." }, ...] } }
     const slots = [];
-    const slotsByDay = data.data?.slots ?? {};
+    const slotsByDay = data.slots ?? {};
 
     for (const [date, daySlots] of Object.entries(slotsByDay)) {
       for (const slot of daySlots) {
