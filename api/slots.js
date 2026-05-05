@@ -22,34 +22,39 @@ export default async function handler(req, res) {
   end.setDate(end.getDate() + 7);
 
   const params = new URLSearchParams({
-    apiKey: CAL_API_KEY,
     eventTypeId: CAL_EVENT_TYPE_ID,
-    startTime: start.toISOString(),
-    endTime: end.toISOString(),
+    start: start.toISOString(),
+    end: end.toISOString(),
     timeZone,
   });
 
   try {
     const response = await fetch(
-      `https://api.cal.com/v1/slots/available?${params}`
+      `https://api.cal.com/v2/slots?${params}`,
+      {
+        headers: {
+          'cal-api-version': '2024-09-04',
+          Authorization: `Bearer ${CAL_API_KEY}`,
+        },
+      }
     );
 
     if (!response.ok) {
       const err = await response.text();
       console.error('Cal.com slots error:', err);
-      return res.status(502).json({ error: 'Failed to fetch available slots', detail: err, status: response.status });
+      return res.status(502).json({ error: 'Failed to fetch available slots', detail: err });
     }
 
     const data = await response.json();
 
-    // v1 response: { slots: { "YYYY-MM-DD": [{ time: "..." }, ...] } }
+    // v2 /slots response: { data: { "YYYY-MM-DD": [{ start: "..." }, ...] }, status: "success" }
     const slots = [];
-    const slotsByDay = data.slots ?? {};
+    const slotsByDay = data.data ?? {};
 
     for (const [date, daySlots] of Object.entries(slotsByDay)) {
       for (const slot of daySlots) {
         if (slots.length >= 6) break;
-        const dt = new Date(slot.time);
+        const dt = new Date(slot.start);
         const label = dt.toLocaleString('en-US', {
           timeZone,
           weekday: 'long',
@@ -59,7 +64,7 @@ export default async function handler(req, res) {
           minute: '2-digit',
           hour12: true,
         });
-        slots.push({ label, value: slot.time });
+        slots.push({ label, value: slot.start });
       }
       if (slots.length >= 6) break;
     }
